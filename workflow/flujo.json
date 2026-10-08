@@ -1,0 +1,1015 @@
+{
+  "name": "Entrega Final - Atención al cliente con IA + HITL",
+  "nodes": [
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "id": "c1",
+              "leftValue": "={{ $('Buscar pendiente').item.json.Email }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            },
+            {
+              "id": "c2",
+              "leftValue": "={{ $('Buscar pendiente').item.json.Mensaje }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "name": "¿Datos completos?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -2464,
+        -320
+      ],
+      "id": "6a93b9e2-8161-40be-a1ce-17fe0fc4fb83",
+      "notes": "Valida que existan Email y Mensaje. Si falta alguno → rama de error.",
+      "notesInFlow": true
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "gpt-4o-mini",
+          "mode": "list",
+          "cachedResultName": "GPT-4O-MINI"
+        },
+        "messages": {
+          "values": [
+            {
+              "content": "Sos el asistente de atención al cliente de un negocio. Analizá la solicitud y respondé SOLO en JSON con estas claves: categoria (Consulta | Reclamo | Presupuesto | Otro), urgencia (Alta | Media | Baja), respuesta (email en español rioplatense, cordial, máximo 150 palabras, firmado como 'El equipo').",
+              "role": "system"
+            },
+            {
+              "content": "=Nombre del cliente: {{ $('Buscar pendiente').item.json.Nombre }}\nMensaje: {{ $('Buscar pendiente').item.json.Mensaje }}"
+            }
+          ]
+        },
+        "jsonOutput": true,
+        "options": {
+          "maxTokens": 400,
+          "temperature": 0.3
+        }
+      },
+      "name": "IA - Clasificar y redactar",
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 1.8,
+      "position": [
+        -1984,
+        -432
+      ],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 2000,
+      "id": "722b736e-e1f8-46ea-b34f-bec5db5db404",
+      "credentials": {
+        "openAiApi": {
+          "id": null,
+          "name": "",
+          "__aiGatewayManaged": true
+        }
+      },
+      "onError": "continueErrorOutput",
+      "notes": "GPT-4o-mini. Prompt con variables dinámicas. Devuelve JSON: categoria, urgencia, respuesta. Max 400 tokens, 3 reintentos, salida de error.",
+      "notesInFlow": true
+    },
+    {
+      "parameters": {
+        "authentication": "airtableOAuth2Api",
+        "operation": "update",
+        "base": {
+          "__rl": true,
+          "value": "appZ0uJck1sVVm312",
+          "mode": "list",
+          "cachedResultName": "n8n.csv",
+          "cachedResultUrl": "https://airtable.com/appZ0uJck1sVVm312"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tblcDUb7tTBKBN8TF",
+          "mode": "list",
+          "cachedResultName": "Solicitudes",
+          "cachedResultUrl": "https://airtable.com/appZ0uJck1sVVm312/tblcDUb7tTBKBN8TF"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "id": "={{ $('Buscar pendiente').item.json.id }}",
+            "Estado": "={{ 'Procesado por IA' }}",
+            "Respuesta IA": "={{ $json.message.content.respuesta }}",
+            "Categoria": "={{ $json.message.content.categoria }}",
+            "Urgencia": "={{ $json.message.content.urgencia }}",
+            "Cliente": "={{ [$('Airtable - Guardar cliente').item.json.id] }}"
+          },
+          "matchingColumns": [
+            "id"
+          ],
+          "schema": [
+            {
+              "id": "id",
+              "displayName": "id",
+              "required": false,
+              "defaultMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true
+            },
+            {
+              "id": "Estado",
+              "displayName": "Estado",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "Pendiente",
+                  "value": "Pendiente"
+                }
+              ],
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Respuesta IA",
+              "displayName": "Respuesta IA",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Categoria",
+              "displayName": "Categoria",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Urgencia",
+              "displayName": "Urgencia",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {
+          "typecast": true
+        }
+      },
+      "name": "Airtable - Procesado por IA",
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.1,
+      "position": [
+        -1744,
+        -432
+      ],
+      "id": "12673b16-f59b-45bb-8c95-f053af24afa5",
+      "credentials": {
+        "airtableOAuth2Api": {
+          "id": "rTNDY9WAS4X1itD2",
+          "name": "Airtable account"
+        }
+      },
+      "notes": "Guarda el borrador, categoría y urgencia. Estado → Procesado por IA.",
+      "notesInFlow": true
+    },
+    {
+      "parameters": {
+        "operation": "sendAndWait",
+        "sendTo": "alan.e.g.contreras@gmail.com",
+        "subject": "=Aprobar respuesta para {{ $('Buscar pendiente').item.json.Nombre }}",
+        "message": "=Cliente: {{ $('Buscar pendiente').item.json.Nombre }} ({{ $('Buscar pendiente').item.json.Email }})\nCategoría: {{ $('IA - Clasificar y redactar').item.json.message.content.categoria }} | Urgencia: {{ $('IA - Clasificar y redactar').item.json.message.content.urgencia }}\n\nMensaje original:\n{{ $('Buscar pendiente').item.json.Mensaje }}\n\nBorrador IA:\n{{ $('IA - Clasificar y redactar').item.json.message.content.respuesta }}",
+        "approvalOptions": {
+          "values": {
+            "approvalType": "double"
+          }
+        },
+        "options": {}
+      },
+      "name": "HITL - Aprobación por Gmail",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        -1504,
+        -432
+      ],
+      "webhookId": "50aad1ba-69c9-4361-b610-2fe34d6e4332",
+      "id": "0425ed18-09fd-4f45-b5b1-2494d8f11081",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "RVLwcAI4CHZ4CO5w",
+          "name": "Gmail account"
+        }
+      },
+      "notes": "Human in the loop: envía el borrador al responsable y pausa el flujo hasta que apruebe o rechace.",
+      "notesInFlow": true
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "id": "c3",
+              "leftValue": "={{ $json.data.approved }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "name": "¿Aprobado?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -1280,
+        -432
+      ],
+      "id": "08b10b3b-5942-4637-8352-d16d7e9eaa9d",
+      "notes": "Evalúa la decisión del humano.",
+      "notesInFlow": true
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $('Buscar pendiente').item.json.Email }}",
+        "subject": "Respuesta a tu consulta",
+        "emailType": "text",
+        "message": "={{ $('IA - Clasificar y redactar').item.json.message.content.respuesta }}",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "name": "Gmail - Responder al cliente",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        -1040,
+        -528
+      ],
+      "webhookId": "7218871c-7ec7-42ad-a3e5-b2ff6c5977b5",
+      "id": "529b4549-ebbd-4aa3-8211-929ccfa15d09",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "RVLwcAI4CHZ4CO5w",
+          "name": "Gmail account"
+        }
+      },
+      "notes": "Acción crítica: envía la respuesta aprobada al email del cliente.",
+      "notesInFlow": true
+    },
+    {
+      "parameters": {
+        "authentication": "airtableOAuth2Api",
+        "operation": "update",
+        "base": {
+          "__rl": true,
+          "value": "appZ0uJck1sVVm312",
+          "mode": "list",
+          "cachedResultName": "n8n.csv",
+          "cachedResultUrl": "https://airtable.com/appZ0uJck1sVVm312"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tblcDUb7tTBKBN8TF",
+          "mode": "list",
+          "cachedResultName": "Solicitudes",
+          "cachedResultUrl": "https://airtable.com/appZ0uJck1sVVm312/tblcDUb7tTBKBN8TF"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "id": "={{ $('Buscar pendiente').item.json.id }}",
+            "Estado": "={{ 'Enviado' }}"
+          },
+          "matchingColumns": [
+            "id"
+          ],
+          "schema": []
+        },
+        "options": {
+          "typecast": true
+        }
+      },
+      "name": "Airtable - Enviado",
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.1,
+      "position": [
+        -832,
+        -528
+      ],
+      "id": "26ebc2ce-0870-4567-8d4d-62d26de845c9",
+      "credentials": {
+        "airtableOAuth2Api": {
+          "id": "rTNDY9WAS4X1itD2",
+          "name": "Airtable account"
+        }
+      },
+      "notes": "Estado → Enviado.",
+      "notesInFlow": true
+    },
+    {
+      "parameters": {
+        "authentication": "airtableOAuth2Api",
+        "operation": "update",
+        "base": {
+          "__rl": true,
+          "value": "appZ0uJck1sVVm312",
+          "mode": "list",
+          "cachedResultName": "n8n.csv",
+          "cachedResultUrl": "https://airtable.com/appZ0uJck1sVVm312"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tblcDUb7tTBKBN8TF",
+          "mode": "list",
+          "cachedResultName": "Solicitudes",
+          "cachedResultUrl": "https://airtable.com/appZ0uJck1sVVm312/tblcDUb7tTBKBN8TF"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "id": "={{ $('Buscar pendiente').item.json.id }}",
+            "Estado": "={{ 'Rechazado' }}"
+          },
+          "matchingColumns": [
+            "id"
+          ],
+          "schema": []
+        },
+        "options": {
+          "typecast": true
+        }
+      },
+      "name": "Airtable - Rechazado",
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.1,
+      "position": [
+        -1040,
+        -320
+      ],
+      "id": "abd8fb92-a24f-48a3-b418-71336cbd9321",
+      "credentials": {
+        "airtableOAuth2Api": {
+          "id": "rTNDY9WAS4X1itD2",
+          "name": "Airtable account"
+        }
+      },
+      "notes": "Estado → Rechazado. No se contacta al cliente.",
+      "notesInFlow": true
+    },
+    {
+      "parameters": {
+        "authentication": "airtableOAuth2Api",
+        "operation": "create",
+        "base": {
+          "__rl": true,
+          "value": "appZ0uJck1sVVm312",
+          "mode": "list",
+          "cachedResultName": "n8n.csv",
+          "cachedResultUrl": "https://airtable.com/appZ0uJck1sVVm312"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tbl3CAJFpWjVM2iNH",
+          "mode": "list",
+          "cachedResultName": "Logs",
+          "cachedResultUrl": "https://airtable.com/appZ0uJck1sVVm312/tbl3CAJFpWjVM2iNH"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Solicitud ID": "={{ $('Buscar pendiente').item.json.id }}",
+            "Tipo": "={{ $json.error ? 'Error IA' : 'Datos incompletos' }}",
+            "Detalle": "={{ $json.error ? JSON.stringify($json.error) : 'Falta Email o Mensaje' }}",
+            "Fecha": "={{ $now.toISO() }}"
+          },
+          "matchingColumns": [],
+          "schema": []
+        },
+        "options": {
+          "typecast": true
+        }
+      },
+      "name": "Airtable - Registrar error (Logs)",
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.1,
+      "position": [
+        -1744,
+        40
+      ],
+      "id": "08b148cb-883f-4acb-9432-8aa39c153a24",
+      "credentials": {
+        "airtableOAuth2Api": {
+          "id": "rTNDY9WAS4X1itD2",
+          "name": "Airtable account"
+        }
+      },
+      "notes": "Registra en la tabla Logs los datos incompletos o fallos de la IA.",
+      "notesInFlow": true
+    },
+    {
+      "parameters": {
+        "authentication": "airtableOAuth2Api",
+        "operation": "update",
+        "base": {
+          "__rl": true,
+          "value": "appZ0uJck1sVVm312",
+          "mode": "list",
+          "cachedResultName": "n8n.csv",
+          "cachedResultUrl": "https://airtable.com/appZ0uJck1sVVm312"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tblcDUb7tTBKBN8TF",
+          "mode": "list",
+          "cachedResultName": "Solicitudes",
+          "cachedResultUrl": "https://airtable.com/appZ0uJck1sVVm312/tblcDUb7tTBKBN8TF"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "id": "={{ $('Buscar pendiente').item.json.id }}",
+            "Estado": "={{ 'Error' }}"
+          },
+          "matchingColumns": [
+            "id"
+          ],
+          "schema": []
+        },
+        "options": {
+          "typecast": true
+        }
+      },
+      "name": "Airtable - Estado Error",
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.1,
+      "position": [
+        -1504,
+        40
+      ],
+      "id": "b5e298a1-7d13-4bd3-8e34-0c8cdb513ce5",
+      "credentials": {
+        "airtableOAuth2Api": {
+          "id": "rTNDY9WAS4X1itD2",
+          "name": "Airtable account"
+        }
+      },
+      "notes": "Estado → Error para revisión manual.",
+      "notesInFlow": true
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "f33e5480-e2ff-4834-a6d5-d45bbbdacc99",
+              "leftValue": "={{ $json.Estado }}",
+              "rightValue": "Pendiente",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -2672,
+        -352
+      ],
+      "id": "c7745ce6-a098-4372-b10f-622f3f6cfa1a",
+      "name": "¿Hay algun caso pendiente?",
+      "notes": "Anti-bucle: solo sigue si el Estado es Pendiente. Si no, corta el flujo.",
+      "notesInFlow": true
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        -2672,
+        -120
+      ],
+      "id": "6de7059a-d045-46a5-af73-4ddccbd30f02",
+      "name": "Todos han sido procesado",
+      "notes": "Fin sin acción: no hay solicitudes pendientes.",
+      "notesInFlow": true
+    },
+    {
+      "parameters": {
+        "authentication": "airtableOAuth2Api",
+        "operation": "search",
+        "base": {
+          "__rl": true,
+          "value": "appZ0uJck1sVVm312",
+          "mode": "list",
+          "cachedResultName": "n8n.csv",
+          "cachedResultUrl": "https://airtable.com/appZ0uJck1sVVm312"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tblcDUb7tTBKBN8TF",
+          "mode": "list",
+          "cachedResultName": "Solicitudes",
+          "cachedResultUrl": "https://airtable.com/appZ0uJck1sVVm312/tblcDUb7tTBKBN8TF"
+        },
+        "filterByFormula": "{Estado}='Pendiente'",
+        "returnAll": false,
+        "limit": 1,
+        "options": {}
+      },
+      "id": "52fbfd06-4072-4965-a895-bbfd8b9748b5",
+      "name": "Buscar pendiente",
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.1,
+      "position": [
+        -2916,
+        -352
+      ],
+      "credentials": {
+        "airtableOAuth2Api": {
+          "id": "rTNDY9WAS4X1itD2",
+          "name": "Airtable account"
+        }
+      },
+      "notes": "Busca 1 registro con Estado = Pendiente. Garantiza que cada ejecución procese una solicitud distinta.",
+      "notesInFlow": true
+    },
+    {
+      "parameters": {
+        "content": "## 🤖 Entrega Final: Atención al cliente con IA + Human in the Loop\nFlujo event-driven que recibe solicitudes desde un **formulario**, las guarda en **Airtable**, las clasifica y redacta una respuesta con **IA (OpenAI)**, pide **aprobación humana por Gmail** antes de contactar al cliente y registra cada paso en la base.\n\n**Estados:** Pendiente → Procesado por IA → Enviado / Rechazado / Error\n**Stack:** n8n · Airtable · OpenAI · Gmail",
+        "width": 2800,
+        "height": 260,
+        "color": 4
+      },
+      "id": "b83086c9-9b34-4f26-9b9e-d21573bc6101",
+      "name": "Nota - Descripción",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -3440,
+        -1040
+      ]
+    },
+    {
+      "parameters": {
+        "content": "### 1️⃣ Entrada y anti-bucle\nEl cliente completa el **formulario**, la solicitud se guarda en Airtable como **Pendiente** y se busca la próxima pendiente. Si no hay nada, el flujo termina.",
+        "width": 900,
+        "height": 780,
+        "color": 7
+      },
+      "id": "2d7e4cfa-d0d4-4101-aa18-434069263dd9",
+      "name": "Nota - 1",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -3440,
+        -660
+      ]
+    },
+    {
+      "parameters": {
+        "content": "### 2️⃣ Validación + IA\nSe validan los datos obligatorios y la IA clasifica la consulta y redacta el borrador con un prompt dinámico.",
+        "width": 880,
+        "height": 480,
+        "color": 5
+      },
+      "id": "97b723ff-7a10-44a9-b608-e6beb7802596",
+      "name": "Nota - 2",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -2500,
+        -660
+      ]
+    },
+    {
+      "parameters": {
+        "content": "### 3️⃣ Human in the Loop\nEl flujo se pausa hasta que un humano aprueba o rechaza el borrador.",
+        "width": 420,
+        "height": 480,
+        "color": 3
+      },
+      "id": "f781d824-1291-4419-a77a-8aacad0b3877",
+      "name": "Nota - 3",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -1580,
+        -660
+      ]
+    },
+    {
+      "parameters": {
+        "content": "### 4️⃣ Respuesta al cliente\nSolo si fue aprobado se envía el email. Se actualiza el estado final.",
+        "width": 460,
+        "height": 580,
+        "color": 6
+      },
+      "id": "f153308f-861c-4b1e-878b-4277db7701e4",
+      "name": "Nota - 4",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -1100,
+        -720
+      ]
+    },
+    {
+      "parameters": {
+        "content": "### ⚠️ Manejo de errores\nDatos incompletos o fallo de la IA → registro en **Logs** y Estado = Error.",
+        "width": 480,
+        "height": 320,
+        "color": 2
+      },
+      "id": "a0dda64b-b26e-4bc3-a5e1-17b89bb4c546",
+      "name": "Nota - 5",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -1800,
+        -100
+      ]
+    },
+    {
+      "parameters": {
+        "authentication": "airtableOAuth2Api",
+        "operation": "upsert",
+        "base": {
+          "__rl": true,
+          "value": "appZ0uJck1sVVm312",
+          "mode": "list",
+          "cachedResultName": "n8n.csv",
+          "cachedResultUrl": "https://airtable.com/appZ0uJck1sVVm312"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tblY1PVa3mfakkFPX",
+          "mode": "list",
+          "cachedResultName": "Clientes",
+          "cachedResultUrl": "https://airtable.com/appZ0uJck1sVVm312/tblY1PVa3mfakkFPX"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Email": "={{ $('Buscar pendiente').item.json.Email }}",
+            "Nombre": "={{ $('Buscar pendiente').item.json.Nombre }}"
+          },
+          "matchingColumns": [
+            "Email"
+          ],
+          "schema": [
+            {
+              "id": "Email",
+              "displayName": "Email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Nombre",
+              "displayName": "Nombre",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ]
+        },
+        "options": {
+          "typecast": true
+        }
+      },
+      "id": "3bc8d9e4-851f-4614-a061-4ba4cfaa64cc",
+      "name": "Airtable - Guardar cliente",
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.1,
+      "position": [
+        -2224,
+        -432
+      ],
+      "credentials": {
+        "airtableOAuth2Api": {
+          "id": "rTNDY9WAS4X1itD2",
+          "name": "Airtable account"
+        }
+      },
+      "notes": "Memoria del cliente: crea o actualiza el cliente en la tabla Clientes (por Email).",
+      "notesInFlow": true
+    },
+    {
+      "parameters": {
+        "authentication": "airtableOAuth2Api",
+        "operation": "create",
+        "base": {
+          "__rl": true,
+          "value": "appZ0uJck1sVVm312",
+          "mode": "list",
+          "cachedResultName": "n8n.csv",
+          "cachedResultUrl": "https://airtable.com/appZ0uJck1sVVm312"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tblcDUb7tTBKBN8TF",
+          "mode": "list",
+          "cachedResultName": "Solicitudes",
+          "cachedResultUrl": "https://airtable.com/appZ0uJck1sVVm312/tblcDUb7tTBKBN8TF"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Nombre": "={{ $json.Nombre }}",
+            "Email": "={{ $json.Email }}",
+            "Mensaje": "={{ $json.Mensaje }}",
+            "Estado": "={{ 'Pendiente' }}"
+          },
+          "matchingColumns": [],
+          "schema": []
+        },
+        "options": {
+          "typecast": true
+        }
+      },
+      "id": "67dbe46b-53de-49b1-9440-b4b470be07b8",
+      "name": "Airtable - Crear solicitud",
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.1,
+      "position": [
+        -3156,
+        -352
+      ],
+      "credentials": {
+        "airtableOAuth2Api": {
+          "id": "rTNDY9WAS4X1itD2",
+          "name": "Airtable account"
+        }
+      },
+      "notes": "Guarda la solicitud en Airtable con Estado = Pendiente.",
+      "notesInFlow": true
+    },
+    {
+      "parameters": {
+        "formTitle": "Contacto",
+        "formDescription": "Dejanos tu consulta y te respondemos por mail.",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "Nombre",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Email",
+              "fieldType": "email"
+            },
+            {
+              "fieldLabel": "Mensaje",
+              "fieldType": "textarea"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "c3ffa1a0-bb49-4941-ae35-9d5643a3b356",
+      "name": "Formulario de contacto",
+      "type": "n8n-nodes-base.formTrigger",
+      "typeVersion": 2.2,
+      "position": [
+        -3376,
+        -352
+      ],
+      "webhookId": "a05536bf-4409-4d33-a645-d17d702fb330",
+      "notes": "El cliente carga su consulta. El flujo arranca al instante, sin revisar Airtable cada minuto.",
+      "notesInFlow": true
+    }
+  ],
+  "connections": {
+    "¿Datos completos?": {
+      "main": [
+        [
+          {
+            "node": "Airtable - Guardar cliente",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Airtable - Registrar error (Logs)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IA - Clasificar y redactar": {
+      "main": [
+        [
+          {
+            "node": "Airtable - Procesado por IA",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Airtable - Registrar error (Logs)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Airtable - Procesado por IA": {
+      "main": [
+        [
+          {
+            "node": "HITL - Aprobación por Gmail",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HITL - Aprobación por Gmail": {
+      "main": [
+        [
+          {
+            "node": "¿Aprobado?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "¿Aprobado?": {
+      "main": [
+        [
+          {
+            "node": "Gmail - Responder al cliente",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Airtable - Rechazado",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gmail - Responder al cliente": {
+      "main": [
+        [
+          {
+            "node": "Airtable - Enviado",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Airtable - Registrar error (Logs)": {
+      "main": [
+        [
+          {
+            "node": "Airtable - Estado Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "¿Hay algun caso pendiente?": {
+      "main": [
+        [
+          {
+            "node": "¿Datos completos?",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Todos han sido procesado",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Buscar pendiente": {
+      "main": [
+        [
+          {
+            "node": "¿Hay algun caso pendiente?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Airtable - Guardar cliente": {
+      "main": [
+        [
+          {
+            "node": "IA - Clasificar y redactar",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Airtable - Crear solicitud": {
+      "main": [
+        [
+          {
+            "node": "Buscar pendiente",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Formulario de contacto": {
+      "main": [
+        [
+          {
+            "node": "Airtable - Crear solicitud",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "errorWorkflow": "xXIBuKOg8hQGhYBU"
+  },
+  "pinData": {}
+}
