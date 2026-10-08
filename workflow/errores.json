@@ -1,0 +1,138 @@
+{
+  "name": "Errores - Entrega Final",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "00ac20b9-1a41-42a6-90e9-54b7adb791bf",
+      "name": "Error Trigger",
+      "type": "n8n-nodes-base.errorTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ],
+      "notes": "Se dispara cuando falla cualquier nodo del flujo principal sin manejo de error.",
+      "notesInFlow": true
+    },
+    {
+      "parameters": {
+        "authentication": "airtableOAuth2Api",
+        "operation": "create",
+        "base": {
+          "__rl": true,
+          "value": "appZ0uJck1sVVm312",
+          "mode": "list",
+          "cachedResultName": "n8n.csv"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tbl3CAJFpWjVM2iNH",
+          "mode": "list",
+          "cachedResultName": "Logs"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Solicitud ID": "={{ $json.execution.id }}",
+            "Tipo": "Error del workflow",
+            "Detalle": "={{ $json.execution.lastNodeExecuted }}: {{ $json.execution.error.message }}",
+            "Fecha": "={{ $now.toISO() }}"
+          },
+          "matchingColumns": [],
+          "schema": []
+        },
+        "options": {
+          "typecast": true
+        }
+      },
+      "id": "6de779f9-7026-4dc4-aa7b-5f9994207ca0",
+      "name": "Registrar error en Logs",
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.1,
+      "position": [
+        240,
+        0
+      ],
+      "credentials": {
+        "airtableOAuth2Api": {
+          "id": "rTNDY9WAS4X1itD2",
+          "name": "Airtable account"
+        }
+      },
+      "notes": "Guarda el error en la tabla Logs de Airtable.",
+      "notesInFlow": true
+    },
+    {
+      "parameters": {
+        "sendTo": "alan.e.g.contreras@gmail.com",
+        "subject": "=⚠️ Error en el flujo: {{ $('Error Trigger').item.json.workflow.name }}",
+        "emailType": "text",
+        "message": "=Falló el nodo: {{ $('Error Trigger').item.json.execution.lastNodeExecuted }}\nError: {{ $('Error Trigger').item.json.execution.error.message }}\nEjecución: {{ $('Error Trigger').item.json.execution.url }}",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "id": "aa22b931-76ed-494a-a4f3-fceb15ea352f",
+      "name": "Avisar error por Gmail",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        480,
+        0
+      ],
+      "webhookId": "a0fe1c9d-17dc-4ebe-b615-2db6dd77a6a0",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "RVLwcAI4CHZ4CO5w",
+          "name": "Gmail account"
+        }
+      },
+      "notes": "Alerta al responsable con el nodo que falló y el link a la ejecución.",
+      "notesInFlow": true
+    },
+    {
+      "parameters": {
+        "content": "## ⚠️ Workflow de errores\nConfigurado como **Error Workflow** del flujo principal (Settings). Captura cualquier error no controlado, lo registra en **Logs** y avisa por **Gmail**.",
+        "width": 720,
+        "height": 420,
+        "color": 3
+      },
+      "id": "5a546392-f6d9-46f7-af79-8ad77e8f27b2",
+      "name": "Nota",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -80,
+        -240
+      ]
+    }
+  ],
+  "connections": {
+    "Error Trigger": {
+      "main": [
+        [
+          {
+            "node": "Registrar error en Logs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Registrar error en Logs": {
+      "main": [
+        [
+          {
+            "node": "Avisar error por Gmail",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "pinData": {}
+}
